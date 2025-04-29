@@ -2,7 +2,6 @@
 #define QUICKSORT_H_
 
 #include <mpi.h>
-#include <stdio.h>
 
 /**
  * Verify that elements are sorted in ascending order. If not, write an error
