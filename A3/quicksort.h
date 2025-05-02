@@ -3,6 +3,9 @@
 
 #include <mpi.h>
 #include <stdio.h>
+#include <stdlib.h>
+
+typedef int NUMBER;
 
 /**
  * Verify that elements are sorted in ascending order. If not, write an error
@@ -12,6 +15,7 @@
  * @param n Number of elements
  * @param file_name Name of output file
  * @return 0 on success, -2 on I/O error
+ * Author: Sheng
  */
 int check_and_print(int *elements, int n, char *file_name);
 
