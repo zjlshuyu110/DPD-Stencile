@@ -135,6 +135,15 @@ int global_sort(int **elements, int n, MPI_Comm comm, int pivot_strategy)
 	return final_n;
 }
 
+void merge_ascending(int *v1, int n1, int *v2, int n2, int *result)
+{
+	int i = 0, j = 0, k = 0;
+	while (i < n1 && j < n2) {
+		result[k++] = (v1[i] <= v2[j]) ? v1[i++] : v2[j++];
+	}
+	while (i < n1) result[k++] = v1[i++];
+	while (j < n2) result[k++] = v2[j++];
+}
 
 int read_input(char *file_name, int **elements)
 {
@@ -169,6 +178,15 @@ int read_input(char *file_name, int **elements)
 
 	fclose(file);
 	return n;
+}
+
+int sorted_ascending(int *elements, int n)
+{
+	for (int i=1; i<n; i++) {
+		if (elements[i] < elements[i-1])
+			return 0;
+	}
+	return 1;
 }
 
 void swap(int *e1, int *e2)
