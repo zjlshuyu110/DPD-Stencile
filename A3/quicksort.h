@@ -4,6 +4,7 @@
 #include <mpi.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "pivot.h"
 
@@ -47,13 +48,14 @@ void gather_on_root(int *all_elements, int *my_elements, int local_n);
  * the elements is sorted within each node. When the function returns, all
  * elements owned by process i are smaller than or equal to all elements owned
  * by process i+1, and the elements are sorted within each node.
+ * Writen with the assistance of ChatGPT.
  * @param elements Pointer to the array of sorted values on the current node. Will point to a(n) (new) array with the sorted elements when the function returns.
  * @param n Length of *elements
  * @param MPI_Comm Communicator containing all processes participating in the global sort
  * @param pivot_strategy Tells how to select the pivot element. See documentation of select_pivot in pivot.h.
  * @return New length of *elements
  */
-int global_sort(int **elements, int n, MPI_Comm, int pivot_strategy);
+int global_sort(int **elements, int n, MPI_Comm comm, int pivot_strategy);
 
 /**
  * Merge v1 and v2 to one array, sorted in ascending order, and store the result
@@ -90,5 +92,8 @@ int sorted_ascending(int *elements, int n);
  * Swap the values pointed at by e1 and e2.
  */
 void swap(int *e1, int *e2);
+
+
+void serial_sort(int *elements, int n);
 
 #endif
