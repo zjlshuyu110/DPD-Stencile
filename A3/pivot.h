@@ -60,11 +60,13 @@ int select_pivot_mean_median(int *elements, int n, MPI_Comm communicator);
 
 /**
  * See select pivot!
+ * Author: Sheng
  */
 int select_pivot_median_median(int *elements, int n, MPI_Comm communicator);
 
 /**
  * See select pivot!
+ * Author: xiong
  */
 int select_pivot_smallest_root(int *elements, int n, MPI_Comm communicator);
 
