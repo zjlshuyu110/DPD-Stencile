@@ -53,6 +53,26 @@ int check_and_print(int *elements, int n, char *file_name)
 	fclose(file);
 }
 
+int distribute_from_root(int *all_elements, int n, int **my_elements)
+{
+	int rank, size;
+	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+	MPI_Comm_size(MPI_COMM_WORLD, &size);
+
+	int res = n % size;
+	int my_n = n / size + ((rank < res) ? 1 : 0);
+
+	*my_elements = malloc(my_n * sizeof(NUMBER));
+	if (*my_elements == NULL) {
+		printf("Failed to allocate memory for my elements!\n");
+		MPI_Abort(MPI_COMM_WORLD, 2);
+	}
+
+	int padding = rank * my_n + (rank < res) ? rank : res;
+	memcpy(*my_elements + padding, all_elements, my_n);
+
+	return my_n;
+}
 
 int global_sort(int **elements, int n, MPI_Comm comm, int pivot_strategy)
 {
@@ -106,6 +126,10 @@ int global_sort(int **elements, int n, MPI_Comm comm, int pivot_strategy)
 
 	// Exchange data.
 	int *recv_buff = malloc(recv_count * sizeof(int));
+	if (recv_buff == NULL) {
+		printf("Malloc failed on rank %d\n", rank);
+		MPI_Abort(MPI_COMM_WORLD, 2);
+	}
 	const int *send_ptr = (color == 0) ? (*elements + left_arr_size) : *elements;
 	MPI_Sendrecv(send_ptr, send_count, MPI_INT, partner_rank, 0,
 					recv_buff, recv_count, MPI_INT, partner_rank, 0,
@@ -114,6 +138,11 @@ int global_sort(int **elements, int n, MPI_Comm comm, int pivot_strategy)
 	// 3.4 Merge the two sorted runs into one sorted array.
 	int new_n = (color == 0) ? left_arr_size : right_arr_size + recv_count;
 	int *new_elements = malloc(new_n * sizeof(int));
+	if (new_elements == NULL) {
+		printf("Allocation of new elements failed on rank %d\n", rank);
+		MPI_Abort(MPI_COMM_WORLD, 2);
+	}
+
 	if (color == 0) {
 		merge_ascending(*elements, left_arr_size,
 						recv_buff, recv_count,
