@@ -209,3 +209,81 @@ void serial_sort(int *elements, int n)
 		elements[j + 1] = key;
 	}
 }
+
+
+
+
+
+
+int distribute_from_root(int *all_elements, int n, int **my_elements)
+{   // Distribute elements from root to all processes
+    //to do: check if all_elements is NULL
+    // all_elements is the buffer on root   
+
+    int rank, size;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &size);
+
+    // Calculate counts and displacements for each process
+    int *counts = malloc(size * sizeof(int));
+    int *displs = malloc(size * sizeof(int));
+    int base = n / size;
+    int rem = n % size;
+    for (int i = 0, disp = 0; i < size; ++i) {
+        counts[i] = base + (i < rem ? 1 : 0);
+        displs[i] = disp;
+        disp += counts[i];
+    }
+
+    int local_n = counts[rank];
+    *my_elements = malloc(local_n * sizeof(int));
+
+    MPI_Scatterv(
+        all_elements, counts, displs, MPI_INT,
+        *my_elements, local_n, MPI_INT,
+        0, MPI_COMM_WORLD
+    );
+
+    free(counts);
+    free(displs);
+    return local_n;
+}
+
+void gather_on_root(int *all_elements, int *my_elements, int local_n)
+{   
+    // Gather all elements on root
+    // all_elements is the buffer on root
+    // my_elements is the local array on each process
+    // local_n is the number of elements in my_elements
+    // all_elements will be allocated on root
+    int rank, size;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &size);
+
+    // Gather counts from all processes
+    int *counts = NULL;
+    int *displs = NULL;
+    if (rank == 0) {
+        counts = malloc(size * sizeof(int));
+    }
+    MPI_Gather(&local_n, 1, MPI_INT, counts, 1, MPI_INT, 0, MPI_COMM_WORLD);
+
+    if (rank == 0) {
+        displs = malloc(size * sizeof(int));
+        displs[0] = 0;
+        for (int i = 1; i < size; ++i) {
+            displs[i] = displs[i-1] + counts[i-1];
+        }
+    }
+
+    MPI_Gatherv(
+        my_elements, local_n, MPI_INT,
+        all_elements, counts, displs, MPI_INT,
+        0, MPI_COMM_WORLD
+    );
+
+    if (rank == 0) {
+        free(counts);
+        free(displs);
+    }
+}
