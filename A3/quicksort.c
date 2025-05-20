@@ -3,13 +3,31 @@
 
 int main(int argc, char *argv[])
 {
-	const char* input_file_name = "test.txt";
-	const char* output_file_name = "result.txt";
+	MPI_Init(&argc, &argv);
+
+	if (argc != 4) {
+		fprintf(stderr, "quicksort <input_file_name> <output_file_name> <pivot_strategy 1, 2, 3>");
+		MPI_Abort(MPI_COMM_WORLD, 2);
+	}
+	const char* input_file_name = argv[1];
+	if (input_file_name == NULL) {
+		fprintf(stderr, "Please provide the input file name!\n");
+		MPI_Abort(MPI_COMM_WORLD, 2);
+	}
+	const char* output_file_name = argv[2];
+	if (output_file_name == NULL) {
+		fprintf(stderr, "Please provide the output file name!\n");
+		MPI_Abort(MPI_COMM_WORLD, 2);
+	}
+	const int pivot_strategy = atoi(argv[3]);
+	if (pivot_strategy != 1 && pivot_strategy != 2 && pivot_strategy != 3) {
+		fprintf(stderr, "Pivot Strategy must be choosen among 1, 2, or 3!\n");
+		MPI_Abort(MPI_COMM_WORLD, 2);
+	}
+
 	int* global_elements;
 	int* elements;
 	int n = 0;
-
-	MPI_Init(&argc, &argv);
 
 	int rank;
 	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -22,7 +40,7 @@ int main(int argc, char *argv[])
 
 	serial_sort(elements, local_n);
 
-	local_n = global_sort(&elements, local_n, MPI_COMM_WORLD, 1);
+	local_n = global_sort(&elements, local_n, MPI_COMM_WORLD, pivot_strategy);
 
 	gather_on_root(global_elements, elements, local_n);
 
@@ -51,16 +69,9 @@ int check_and_print(int *elements, int n, const char *file_name)
 		return -2;
 	}
 
-	// Write the array size as the first line
-	if (fprintf(file, "%d\n", n) < 0) {
-		fprintf(stderr, "Failed to write array size to file.\n");
-		fclose(file);
-		return -2;
-	}
-
 	// Write each element to the file
 	for (int i = 0; i < n; ++i) {
-		if (fprintf(file, "%d\n", elements[i]) < 0) {
+		if (fprintf(file, "%d ", elements[i]) < 0) {
 			fprintf(stderr, "Failed to write element %d to file.\n", i);
 			fclose(file);
 			return -2;
