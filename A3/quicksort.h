@@ -20,7 +20,7 @@ typedef int NUMBER;
  * @return 0 on success, -2 on I/O error
  * Author: Sheng
  */
-int check_and_print(int *elements, int n, char *file_name);
+int check_and_print(int *elements, int n, const char *file_name);
 
 /**
  * Distribute all elements from root to the other processes as evenly as
@@ -76,7 +76,7 @@ void merge_ascending(int *v1, int n1, int *v2, int n2, int *result);
  * @param elements Pointer to array to be created and populated
  * @return Number of elements read and stored
  */
-int read_input(char *file_name, int **elements);
+int read_input(const char *file_name, int **elements);
 
 /**
  * Check if a number of elements are sorted in ascending order. If they aren't,
