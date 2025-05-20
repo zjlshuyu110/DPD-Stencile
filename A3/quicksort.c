@@ -147,7 +147,7 @@ int global_sort(int **elements, int n, MPI_Comm comm, int pivot_strategy)
 					comm, MPI_STATUS_IGNORE);
 
 	// 3.4 Merge the two sorted runs into one sorted array.
-	int new_n = (color == 0) ? left_arr_size : right_arr_size + recv_count;
+	int new_n = ((color == 0) ? left_arr_size : right_arr_size) + recv_count;
 	int *new_elements = malloc(new_n * sizeof(int));
 	if (new_elements == NULL) {
 		printf("Allocation of new elements failed on rank %d\n", rank);
