@@ -26,7 +26,12 @@ int main(int argc, char *argv[])
 
 	gather_on_root(global_elements, elements, local_n);
 
-	if (rank == 0) check_and_print(global_elements, n, output_file_name);
+	if (rank == 0) {
+		check_and_print(global_elements, n, output_file_name);
+		free(global_elements);
+	}
+
+	free(elements);
 
 	MPI_Finalize();
 	return 0;
