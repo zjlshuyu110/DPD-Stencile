@@ -1,7 +1,7 @@
 #include "quicksort.h"
 
 
-int main(int argc, char const *argv[])
+int main(int argc, char *argv[])
 {
 	const char* input_file_name = "test.txt";
 	const char* output_file_name = "result.txt";
@@ -15,63 +15,55 @@ int main(int argc, char const *argv[])
 	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
 	if (rank == 0) n = read_input(input_file_name, &global_elements);
+
 	MPI_Bcast(&n, 1, MPI_INT, 0, MPI_COMM_WORLD);
 
 	int local_n = distribute_from_root(global_elements, n, &elements);
-	serial_sort(elements, local_n);
-	global_sort(&elements, n, MPI_COMM_WORLD, 1);
 
+	serial_sort(elements, local_n);
+
+	local_n = global_sort(&elements, local_n, MPI_COMM_WORLD, 1);
+
+	gather_on_root(global_elements, elements, local_n);
+
+	if (rank == 0) check_and_print(global_elements, n, output_file_name);
+
+	MPI_Finalize();
 	return 0;
 }
 
 
-int check_and_print(int *elements, int n, char *file_name)
+int check_and_print(int *elements, int n, const char *file_name)
 {
 	if (!sorted_ascending(elements, n)) {
 		printf("Error! Array failed to sort!\n");
 		return -1;
 	}
 
-	FILE *file = fopen(file_name, "wb");
+	FILE *file = fopen(file_name, "w");  // "w" for text mode
 	if (file == NULL) {
 		printf("Error! Can't open the file %s\n", file_name);
 		return -2;
 	}
 
-	if (fwrite(&n, sizeof(int), 1, file) != 1) {
+	// Write the array size as the first line
+	if (fprintf(file, "%d\n", n) < 0) {
 		fprintf(stderr, "Failed to write array size to file.\n");
 		fclose(file);
 		return -2;
 	}
 
-	if (fwrite(elements, sizeof(NUMBER), n, file) != (size_t)n) {
-		fprintf(stderr, "Failed to write array data to file.\n");
-		fclose(file);
-		return -2;
+	// Write each element to the file
+	for (int i = 0; i < n; ++i) {
+		if (fprintf(file, "%d\n", elements[i]) < 0) {
+			fprintf(stderr, "Failed to write element %d to file.\n", i);
+			fclose(file);
+			return -2;
+		}
 	}
 
 	fclose(file);
-}
-
-int distribute_from_root(int *all_elements, int n, int **my_elements)
-{
-	int rank, size;
-	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-	MPI_Comm_size(MPI_COMM_WORLD, &size);
-
-	int res = n % size;
-	int my_n = n / size + ((rank < res) ? 1 : 0);
-
-	*my_elements = malloc(my_n * sizeof(NUMBER));
-	if (*my_elements == NULL) {
-		printf("Failed to allocate memory for my elements!\n");
-		MPI_Abort(MPI_COMM_WORLD, 2);
-	}
-
-	int padding = rank * my_n + (rank < res) ? rank : res;
-	memcpy(*my_elements + padding, all_elements, my_n);
-
-	return my_n;
+	return 0;
 }
 
 int global_sort(int **elements, int n, MPI_Comm comm, int pivot_strategy)
@@ -82,7 +74,7 @@ int global_sort(int **elements, int n, MPI_Comm comm, int pivot_strategy)
 
 	// Require even number of processes for pairing
 	if (size > 1 && size % 2 != 0) {
-		if (rank == 0) fprintf(stderr, "global_sort: Number of processes must be even.\n");
+		if (rank == 0) fprintf(stderr, "global_sort: Number of processes must be even. \n");
 		MPI_Abort(comm, 1);
 	}
 
@@ -102,10 +94,13 @@ int global_sort(int **elements, int n, MPI_Comm comm, int pivot_strategy)
 	// 3.2 Partition locally around pivot.
 	// Use B-search to find the split point of the array.
 	int left = 0, right = n;
+	int mid = 0;
 	while (left < right) {
-		int mid = left + (right - left) / 2;
-		if ((*elements)[mid] < pivot) left = mid + 1;
-		else right = mid;
+		mid = left + (right - left) / 2;
+		if ((*elements)[mid] < pivot)
+			left = mid + 1;
+		else
+			right = mid;
 	}
 	const int left_arr_size  = left;
 	const int right_arr_size = n - left;
@@ -174,7 +169,7 @@ void merge_ascending(int *v1, int n1, int *v2, int n2, int *result)
 	while (j < n2) result[k++] = v2[j++];
 }
 
-int read_input(char *file_name, int **elements)
+int read_input(const char *file_name, int **elements)
 {
 	FILE *file = fopen(file_name, "r");
 	if (file == NULL) {
@@ -206,6 +201,7 @@ int read_input(char *file_name, int **elements)
 	}
 
 	fclose(file);
+
 	return n;
 }
 
@@ -239,15 +235,10 @@ void serial_sort(int *elements, int n)
 	}
 }
 
-
-
-
-
-
 int distribute_from_root(int *all_elements, int n, int **my_elements)
 {   // Distribute elements from root to all processes
     //to do: check if all_elements is NULL
-    // all_elements is the buffer on root   
+    // all_elements is the buffer on root
 
     int rank, size;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -279,7 +270,7 @@ int distribute_from_root(int *all_elements, int n, int **my_elements)
 }
 
 void gather_on_root(int *all_elements, int *my_elements, int local_n)
-{   
+{
     // Gather all elements on root
     // all_elements is the buffer on root
     // my_elements is the local array on each process
