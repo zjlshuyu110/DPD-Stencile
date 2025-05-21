@@ -237,18 +237,23 @@ void swap(int *e1, int *e2)
 	*e2 = temp;
 }
 
+static int compare_qsort(const void *a, const void *b){
+   return (*(int*)a - *(int*)b);
+}
+
 void serial_sort(int *elements, int n)
 {
-	for (int i = 1; i < n; i++) {
-		int key = elements[i];
-		int j = i - 1;
+	// for (int i = 1; i < n; i++) {
+	// 	int key = elements[i];
+	// 	int j = i - 1;
 
-		while (j >= 0 && elements[j] > key) {
-			elements[j + 1] = elements[j];
-			j--;
-		}
-		elements[j + 1] = key;
-	}
+	// 	while (j >= 0 && elements[j] > key) {
+	// 		elements[j + 1] = elements[j];
+	// 		j--;
+	// 	}
+	// 	elements[j + 1] = key;
+	// }
+	qsort(elements, n, sizeof(NUMBER), compare_qsort);
 }
 
 int distribute_from_root(int *all_elements, int n, int **my_elements)
