@@ -38,13 +38,16 @@ int main(int argc, char *argv[])
 
 	int local_n = distribute_from_root(global_elements, n, &elements);
 
+	double start = MPI_Wtime();
 	serial_sort(elements, local_n);
 
 	local_n = global_sort(&elements, local_n, MPI_COMM_WORLD, pivot_strategy);
 
 	gather_on_root(global_elements, elements, local_n);
+	double exec_time = MPI_Wtime() - start;
 
 	if (rank == 0) {
+		printf("Execution time: %f\n", exec_time);
 		check_and_print(global_elements, n, output_file_name);
 		free(global_elements);
 	}
