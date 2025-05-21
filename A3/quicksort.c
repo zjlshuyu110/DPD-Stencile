@@ -1,5 +1,6 @@
 #include "quicksort.h"
 
+#define NOPRINTING
 
 int main(int argc, char *argv[])
 {
@@ -66,6 +67,7 @@ int check_and_print(int *elements, int n, const char *file_name)
 		return -1;
 	}
 
+#ifndef NOPRINTING
 	FILE *file = fopen(file_name, "w");  // "w" for text mode
 	if (file == NULL) {
 		printf("Error! Can't open the file %s\n", file_name);
@@ -82,6 +84,7 @@ int check_and_print(int *elements, int n, const char *file_name)
 	}
 
 	fclose(file);
+#endif
 	return 0;
 }
 
@@ -246,16 +249,6 @@ static int compare_qsort(const void *a, const void *b){
 
 void serial_sort(int *elements, int n)
 {
-	// for (int i = 1; i < n; i++) {
-	// 	int key = elements[i];
-	// 	int j = i - 1;
-
-	// 	while (j >= 0 && elements[j] > key) {
-	// 		elements[j + 1] = elements[j];
-	// 		j--;
-	// 	}
-	// 	elements[j + 1] = key;
-	// }
 	qsort(elements, n, sizeof(NUMBER), compare_qsort);
 }
 
