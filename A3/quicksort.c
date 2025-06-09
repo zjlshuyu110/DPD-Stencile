@@ -42,7 +42,19 @@ int main(int argc, char *argv[])
 	double start = MPI_Wtime();
 	serial_sort(elements, local_n);
 
+	// --- Timing starts here ---
+	MPI_Barrier(MPI_COMM_WORLD); // Ensure all processes are ready
+	double t_start = MPI_Wtime();
+
 	local_n = global_sort(&elements, local_n, MPI_COMM_WORLD, pivot_strategy);
+
+	MPI_Barrier(MPI_COMM_WORLD); // Ensure all processes finished
+	double t_end = MPI_Wtime();
+	double elapsed = t_end - t_start;
+
+	// Gather timing results on rank 0
+	double max_elapsed;
+	MPI_Reduce(&elapsed, &max_elapsed, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
 
 	gather_on_root(global_elements, elements, local_n);
 	double exec_time = MPI_Wtime() - start;
@@ -50,6 +62,7 @@ int main(int argc, char *argv[])
 	if (rank == 0) {
 		printf("Execution time: %f\n", exec_time);
 		check_and_print(global_elements, n, output_file_name);
+		printf("Global sort time (max across ranks): %f seconds\n", max_elapsed);
 		free(global_elements);
 	}
 
