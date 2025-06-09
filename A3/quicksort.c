@@ -1,6 +1,6 @@
 #include "quicksort.h"
 
-#define NOPRINTING
+// #define NOPRINTING
 
 int main(int argc, char *argv[])
 {
@@ -81,7 +81,7 @@ int check_and_print(int *elements, int n, const char *file_name)
 	}
 
 #ifndef NOPRINTING
-	FILE *file = fopen(file_name, "w");  // "w" for text mode
+	FILE *file = fopen(file_name, "w");
 	if (file == NULL) {
 		printf("Error! Can't open the file %s\n", file_name);
 		return -2;
@@ -118,27 +118,10 @@ int global_sort(int **elements, int n, MPI_Comm comm, int pivot_strategy)
 		return n;
 	}
 
-	// 3.1 Select pivot on rank 0 and broadcast
-	int pivot;
-	if (rank == 0) {
-		int pivot_index = select_pivot(pivot_strategy, *elements, n, comm);
-		pivot = (*elements)[pivot_index];
-	}
-	MPI_Bcast(&pivot, 1, MPI_INT, 0, comm);
-
-	// 3.2 Partition locally around pivot.
-	// Use B-search to find the split point of the array.
-	int left = 0, right = n;
-	int mid = 0;
-	while (left < right) {
-		mid = left + (right - left) / 2;
-		if ((*elements)[mid] < pivot)
-			left = mid + 1;
-		else
-			right = mid;
-	}
-	const int left_arr_size  = left;
-	const int right_arr_size = n - left;
+	// Get the partition from the select pivot.
+	const int right_start_idx = select_pivot(pivot_strategy, *elements, n, comm);
+	const int left_arr_size  = right_start_idx;
+	const int right_arr_size = n - left_arr_size;
 
 	// 3.3 Split processes into two groups
 	int color = (rank < size/2) ? 0 : 1;

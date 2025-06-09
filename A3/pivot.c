@@ -42,27 +42,78 @@ int select_pivot(int pivot_strategy, int *elements, int n, MPI_Comm communicator
 
 // Selects the pivot using the median-of-medians strategy
 int select_pivot_median_root(int *elements, int n, MPI_Comm communicator) {
-    int median = get_median(elements, n);
-    return get_larger_index(elements, n, median);
+	int rank;
+	MPI_Comm_rank(communicator, &rank);
+	int median = 0;
+	if (rank == 0) median = get_median(elements, n);
+	MPI_Bcast(&median, 1, MPI_INT, 0, communicator);
+
+	return get_larger_index(elements, n, median);
 }
 
 // Selects the pivot using the mean-of-medians strategy (placeholder)
 int select_pivot_mean_median(int *elements, int n, MPI_Comm communicator) {
-    // Placeholder: implement mean of medians logic as needed
-    int median = get_median(elements, n);
-    return get_larger_index(elements, n, median);
+	// Placeholder: implement mean of medians logic as needed
+	int rank, size;
+	MPI_Comm_rank(communicator, &rank);
+	MPI_Comm_size(communicator, &size);
+	int local_median = get_median(elements, n);
+	int *medians;
+	if (rank == 0) {
+		medians = malloc(size * sizeof(int));
+		if (medians == NULL) {
+			printf("Error allocating buffers for medians\n");
+			MPI_Abort(MPI_COMM_WORLD, 2);
+		}
+	}
+
+	// Gather all local median to medians
+	MPI_Gather(&local_median, 1, MPI_INT, medians, 1, MPI_INT, 0, communicator);
+	int mean = 0;
+	if (rank == 0) {
+		int sum = 0;
+		for (int i=0; i<size; i++)
+			sum += medians[i];
+		mean = sum / size;
+		free(medians);
+	}
+	MPI_Bcast(&mean, 1, MPI_INT, 0, communicator);
+	return get_larger_index(elements, n, mean);
 }
 
 // Selects the pivot using the median-of-medians strategy (placeholder)
 int select_pivot_median_median(int *elements, int n, MPI_Comm communicator) {
-    // Placeholder: implement median of medians logic as needed
-    int median = get_median(elements, n);
-    return get_larger_index(elements, n, median);
+	// Placeholder: implement median of medians logic as needed
+	int rank, size;
+	MPI_Comm_rank(communicator, &rank);
+	MPI_Comm_size(communicator, &size);
+	int local_median = get_median(elements, n);
+	int *medians;
+	if (rank == 0) {
+		medians = malloc(size * sizeof(int));
+		if (medians == NULL) {
+			printf("Error allocating buffers for medians\n");
+			MPI_Abort(MPI_COMM_WORLD, 2);
+		}
+	}
+
+	// Gather all local median to medians
+	MPI_Gather(&local_median, 1, MPI_INT, medians, 1, MPI_INT, 0, communicator);
+	int median = 0;
+	if (rank == 0) {
+		median = get_median(medians, size);
+		free(medians);
+	}
+	MPI_Bcast(&median, 1, MPI_INT, 0, communicator);
+	return get_larger_index(elements, n, median);
 }
 
 // Selects the pivot as the smallest element's index (fallback strategy)
 int select_pivot_smallest_root(int *elements, int n, MPI_Comm communicator) {
-    if (n == 0) return 0;
-    int smallest = elements[0];
-    return get_larger_index(elements, n, smallest);
+    int rank;
+	MPI_Comm_rank(communicator, &rank);
+	int smallest = 0;
+	if (rank == 0) smallest = elements[0];
+	MPI_Bcast(&smallest, 1, MPI_INT, 0, communicator);
+	return get_larger_index(elements, n, smallest);
 }
