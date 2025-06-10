@@ -81,6 +81,11 @@ int select_pivot_mean_median(int *elements, int n, MPI_Comm communicator) {
 	return get_larger_index(elements, n, mean);
 }
 
+static int compare_qsort(const void *a, const void *b)
+{
+	return (*(int*)a - *(int*)b);
+}
+
 // Selects the pivot using the median-of-medians strategy (placeholder)
 int select_pivot_median_median(int *elements, int n, MPI_Comm communicator) {
 	// Placeholder: implement median of medians logic as needed
@@ -101,6 +106,7 @@ int select_pivot_median_median(int *elements, int n, MPI_Comm communicator) {
 	MPI_Gather(&local_median, 1, MPI_INT, medians, 1, MPI_INT, 0, communicator);
 	int median = 0;
 	if (rank == 0) {
+		qsort(medians, size, sizeof(int), compare_qsort);
 		median = get_median(medians, size);
 		free(medians);
 	}
