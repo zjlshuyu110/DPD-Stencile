@@ -54,15 +54,18 @@ int main(int argc, char *argv[])
 
 	// Gather timing results on rank 0
 	double max_elapsed;
-	MPI_Reduce(&elapsed, &max_elapsed, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+	// MPI_Reduce(&elapsed, &max_elapsed, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
 
 	gather_on_root(global_elements, elements, local_n);
 	double exec_time = MPI_Wtime() - start;
 
+	double max_exec_time;
+	MPI_Reduce(&exec_time, &max_exec_time, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+
 	if (rank == 0) {
 		printf("Execution time: %f\n", exec_time);
 		check_and_print(global_elements, n, output_file_name);
-		printf("Global sort time (max across ranks): %f seconds\n", max_elapsed);
+		// printf("Global sort time (max across ranks): %f seconds\n", max_elapsed);
 		free(global_elements);
 	}
 
