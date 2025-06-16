@@ -39,8 +39,10 @@ int main(int argc, char *argv[])
 
 	int local_n = distribute_from_root(global_elements, n, &elements);
 
-	double start = MPI_Wtime();
+	const double start = MPI_Wtime();
+	const double start_serial = MPI_Wtime();
 	serial_sort(elements, local_n);
+	double time_serial = MPI_Wtime() - start_serial;
 
 	// --- Timing starts here ---
 	MPI_Barrier(MPI_COMM_WORLD); // Ensure all processes are ready
@@ -62,10 +64,13 @@ int main(int argc, char *argv[])
 	double max_exec_time;
 	MPI_Reduce(&exec_time, &max_exec_time, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
 
+	double max_serial_time;
+	MPI_Reduce(&time_serial, &max_serial_time, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+
 	if (rank == 0) {
-		printf("Execution time: %f\n", exec_time);
+		printf("Execution time: %f\n", max_exec_time);
+		printf("Serial time: %f\n", max_serial_time);
 		check_and_print(global_elements, n, output_file_name);
-		// printf("Global sort time (max across ranks): %f seconds\n", max_elapsed);
 		free(global_elements);
 	}
 
