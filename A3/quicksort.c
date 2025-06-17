@@ -1,5 +1,6 @@
 #include "quicksort.h"
 
+// #define NOPRINTING
 
 int main(int argc, char *argv[])
 {
@@ -38,7 +39,10 @@ int main(int argc, char *argv[])
 
 	int local_n = distribute_from_root(global_elements, n, &elements);
 
+	const double start = MPI_Wtime();
+	const double start_serial = MPI_Wtime();
 	serial_sort(elements, local_n);
+	double time_serial = MPI_Wtime() - start_serial;
 
 	// --- Timing starts here ---
 	MPI_Barrier(MPI_COMM_WORLD); // Ensure all processes are ready
@@ -52,13 +56,21 @@ int main(int argc, char *argv[])
 
 	// Gather timing results on rank 0
 	double max_elapsed;
-	MPI_Reduce(&elapsed, &max_elapsed, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+	// MPI_Reduce(&elapsed, &max_elapsed, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
 
 	gather_on_root(global_elements, elements, local_n);
+	double exec_time = MPI_Wtime() - start;
+
+	double max_exec_time;
+	MPI_Reduce(&exec_time, &max_exec_time, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+
+	double max_serial_time;
+	MPI_Reduce(&time_serial, &max_serial_time, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
 
 	if (rank == 0) {
+		printf("Execution time: %f\n", max_exec_time);
+		printf("Serial time: %f\n", max_serial_time);
 		check_and_print(global_elements, n, output_file_name);
-		printf("Global sort time (max across ranks): %f seconds\n", max_elapsed);
 		free(global_elements);
 	}
 
@@ -76,7 +88,8 @@ int check_and_print(int *elements, int n, const char *file_name)
 		return -1;
 	}
 
-	FILE *file = fopen(file_name, "w");  // "w" for text mode
+#ifndef NOPRINTING
+	FILE *file = fopen(file_name, "w");
 	if (file == NULL) {
 		printf("Error! Can't open the file %s\n", file_name);
 		return -2;
@@ -92,6 +105,7 @@ int check_and_print(int *elements, int n, const char *file_name)
 	}
 
 	fclose(file);
+#endif
 	return 0;
 }
 
@@ -112,27 +126,10 @@ int global_sort(int **elements, int n, MPI_Comm comm, int pivot_strategy)
 		return n;
 	}
 
-	// 3.1 Select pivot on rank 0 and broadcast
-	int pivot;
-	if (rank == 0) {
-		int pivot_index = select_pivot(pivot_strategy, *elements, n, comm);
-		pivot = (*elements)[pivot_index];
-	}
-	MPI_Bcast(&pivot, 1, MPI_INT, 0, comm);
-
-	// 3.2 Partition locally around pivot.
-	// Use B-search to find the split point of the array.
-	int left = 0, right = n;
-	int mid = 0;
-	while (left < right) {
-		mid = left + (right - left) / 2;
-		if ((*elements)[mid] < pivot)
-			left = mid + 1;
-		else
-			right = mid;
-	}
-	const int left_arr_size  = left;
-	const int right_arr_size = n - left;
+	// Get the partition from the select pivot.
+	const int right_start_idx = select_pivot(pivot_strategy, *elements, n, comm);
+	const int left_arr_size  = right_start_idx;
+	const int right_arr_size = n - left_arr_size;
 
 	// 3.3 Split processes into two groups
 	int color = (rank < size/2) ? 0 : 1;
@@ -250,18 +247,13 @@ void swap(int *e1, int *e2)
 	*e2 = temp;
 }
 
+static int compare_qsort(const void *a, const void *b){
+   return (*(int*)a - *(int*)b);
+}
+
 void serial_sort(int *elements, int n)
 {
-	for (int i = 1; i < n; i++) {
-		int key = elements[i];
-		int j = i - 1;
-
-		while (j >= 0 && elements[j] > key) {
-			elements[j + 1] = elements[j];
-			j--;
-		}
-		elements[j + 1] = key;
-	}
+	qsort(elements, n, sizeof(NUMBER), compare_qsort);
 }
 
 int distribute_from_root(int *all_elements, int n, int **my_elements)

@@ -2,6 +2,7 @@
 #define PIVOT_H_
 
 #include <mpi.h>
+#include <stdio.h>
 
 // Pivot strategies
 #define MEDIAN_ROOT 1
